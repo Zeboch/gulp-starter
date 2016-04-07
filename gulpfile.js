@@ -17,6 +17,7 @@ var uglify       = require('gulp-uglify');
 var rename       = require("gulp-rename");
 var imagemin     = require("gulp-imagemin");
 var pngquant     = require('imagemin-pngquant');
+var del          = require('del');
 
 /**
 *
@@ -28,11 +29,11 @@ var pngquant     = require('imagemin-pngquant');
 *
 **/
 gulp.task('sass', function() {
-  gulp.src('sass/**/*.sass')
+  gulp.src('src/sass/**/*.sass')
   .pipe(sass({outputStyle: 'compressed'}))
   .pipe(prefix('last 2 versions', '> 1%', 'ie 8', 'Android 2', 'Firefox ESR'))
   .pipe(plumber())
-  .pipe(gulp.dest('css'));
+  .pipe(gulp.dest('dist/css'));
 });
 
 /**
@@ -43,13 +44,35 @@ gulp.task('sass', function() {
 *
 **/
 gulp.task('browser-sync', function() {
-  browserSync.init(['css/*.css', 'js/**/*.js', 'index.html'], {
+  browserSync.init(['dist/css/*.css', 'dist/js/**/*.js', 'dist/index.html'], {
     server: {
-      baseDir: './'
+      baseDir: './dist'
     }
   });
 });
 
+/**
+ * Clean
+ * - dist/js directory
+ * - dist/css directory
+ * - dist/images directory
+ * - finally dist directory
+**/
+gulp.task('clean', function() {
+  del(['dist/js', 'dist/css', 'dist/images', 'dist'], {force: true})
+      .then( function(paths ) {
+        console.log('Deleted files and folders:\n', paths.join('\n'));
+      });
+});
+
+/**
+ * HTML
+ * - copy index.html into dist directory
+**/
+gulp.task('html', function() {
+  gulp.src('index.html')
+  .pipe(gulp.dest('dist'));
+});
 
 /**
 *
@@ -58,13 +81,12 @@ gulp.task('browser-sync', function() {
 *
 **/
 gulp.task('scripts', function() {
-  gulp.src('js/*.js')
+  gulp.src('src/js/*.js')
   .pipe(uglify())
   .pipe(rename({
-    dirname: "min",
-    suffix: ".min",
+    suffix: ".min"
   }))
-  .pipe(gulp.dest('js'))
+  .pipe(gulp.dest('dist/js'))
 });
 
 /**
@@ -74,24 +96,25 @@ gulp.task('scripts', function() {
 *
 **/
 gulp.task('images', function () {
-  return gulp.src('images/*')
+  return gulp.src('src/images/*')
   .pipe(imagemin({
     progressive: true,
     svgoPlugins: [{removeViewBox: false}],
     use: [pngquant()]
   }))
-  .pipe(gulp.dest('images'));
+  .pipe(gulp.dest('dist/images'));
 });
 
 
 /**
 *
 * Default task
+* - Clean dist directory
 * - Runs sass, browser-sync, scripts and image tasks
 * - Watchs for file changes for images, scripts and sass/css
 *
 **/
-gulp.task('default', ['sass', 'browser-sync', 'scripts', 'images'], function () {
+gulp.task('default', ['clean', 'sass', 'browser-sync', 'scripts', 'images', 'html'], function () {
   gulp.watch('sass/**/*.sass', ['sass']);
   gulp.watch('js/**/*.js', ['scripts']);
   gulp.watch('images/*', ['images']);
